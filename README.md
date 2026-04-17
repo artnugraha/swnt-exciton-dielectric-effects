@@ -4,14 +4,14 @@ This repository contains several computer codes, mostly written in Fortran, used
 
 ## Main functionality of the program
 
-The main computational task is the calculation of **exciton energies** for **many different dielectric constants** $\kappa$. Our implementation, published in [Appl. Phys. Lett. 97, 091905 (2010)](https://doi.org/10.1063/1.3485293), is basically based on the work by Jiang *et al.* [Phys. Rev. B **75**, 035407 (2007)] and Sato *et al.* [Phys. Rev. B **76**, 195446].
+The main computational task is the calculation of **exciton energies** for **many different dielectric constants** $\kappa$. Our implementation, published in [Appl. Phys. Lett. 97, 091905 (2010)](https://doi.org/10.1063/1.3485293), is basically based on the work by Jiang *et al.* [Phys. Rev. B **75**, 035407 (2007)] and Sato *et al.* [Phys. Rev. B **76**, 195446 (2007)].
 
 
 The outputs of the main program are collected into a single database file. That database is then used by other programs for constructing the dielectric constant model $\kappa$ and for calculating the environmental energy shift $\Delta E_{\mathrm{env}}$.
 
 All necessary programs are located in this GitHub repository, hereafter will be referred to as the `ROOT/` directory. More detailed usage instructions for each program might be found in the individual Fortran file or Makefile or 00README (if any) inside each subdirectory of `ROOT/`.
 
-## Exciton energy (for Kataura plot)
+## Exciton energy (for $E_{ii}$ database or Kataura plot)
 
 **Main program:** `ROOT/envkata/envkata.f90`  
 **Database maker:** `ROOT/util/makeEii.f90`
@@ -177,7 +177,7 @@ An example input for an alcohol-assisted CVD sample is:
  17  1  2.292  4  3
 ```
 
-## Linear regression of $\kappa$
+## $\kappa$ Regression
 
 **Main program:** `ROOT/diel/linkapp.f90`
 
