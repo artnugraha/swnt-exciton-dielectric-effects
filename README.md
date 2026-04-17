@@ -1,2 +1,2 @@
-# swnt-exciton-dielectric-effects
-Calculation programs for SWNT excitonic environmental (dielectric effects) 
+# Calculation programs for excitonic environmental (dielectric) effects in carbon nanotubes 
+
