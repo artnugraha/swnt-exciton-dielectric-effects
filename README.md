@@ -9,7 +9,115 @@ The main computational task is the calculation of **exciton energies** for **man
 
 The outputs of the main program are collected into a single database file. That database is then used by other programs for constructing the dielectric constant model $\kappa$ and for calculating the environmental energy shift $\Delta E_{\mathrm{env}}$.
 
-All necessary programs are located in this GitHub repository, hereafter will be referred to as the `ROOT/` directory. More detailed usage instructions for each program might be found in the individual Fortran file or Makefile or 00README (if any) inside each subdirectory of `ROOT/`.
+All necessary programs are located in this GitHub repository, hereafter will be referred to as the `ROOT/` directory. More detailed usage instructions for each program might be found in the individual Fortran file or **Makefile** or 00README (if any) inside each subdirectory of `ROOT/`.
+
+## First thing first: Check you can do make!
+
+Each folder in this repository uses a `Makefile` to compile the Fortran source files and to remove intermediate build files after compilation. One representative example is:
+
+```make
+envkata: $(MODS_EXKATAMPI) $(OBJS_EXKATAMPI)
+        mpif90 $(F90FLAGS) $(MODS_EXKATAMPI) $(OBJS_EXKATAMPI) \
+        arguments-kappa.f90 envkata.f90 $(LAPACK) -o envkata.out
+
+clean:
+        rm -f *.a *.exe *.mod *.o *.out *~
+````
+
+### Target `envkata`
+
+This target builds the executable for the program `envkata`. Its role is to compile and link all required module files, object files, and source files into the final executable:
+
+* `envkata:`
+  This is the name of the build target.
+
+* `$(MODS_EXKATAMPI)`
+  This variable usually contains the list of compiled module-related files or dependencies required before building `envkata`.
+
+* `$(OBJS_EXKATAMPI)`
+  This variable usually contains the object files needed for linking the final executable.
+
+* `mpif90`
+  This is the MPI Fortran compiler wrapper. It is used instead of plain `ifort` or `gfortran` because the code is intended to run in parallel using MPI.
+
+* `$(F90FLAGS)`
+  This variable stores compiler options, such as optimization flags, debugging flags, or standards settings.
+
+* `arguments-kappa.f90 envkata.f90`
+  These are the main Fortran source files explicitly compiled and linked in this target.
+  In particular:
+
+  * `arguments-kappa.f90` likely handles command-line or parameter input
+  * `envkata.f90` contains the main program for exciton energy calculations
+
+* `$(LAPACK)`
+  This variable usually expands to the LAPACK and possibly BLAS libraries needed for numerical linear algebra routines.
+
+* `-o envkata.out`
+  This specifies the name of the generated executable. After successful compilation, the executable file will be `envkata.out`.
+
+In practical terms, running
+
+```bash
+make envkata
+```
+
+will produce the executable `envkata.out`, provided all dependencies and compiler settings are correctly defined in the `Makefile`.
+
+### Why `mpif90` is used
+
+The program is designed for MPI-based parallel execution. Therefore, it must be compiled with an MPI-aware compiler wrapper. The generated executable can then be run, for example, with:
+
+```bash
+mpirun -np 4 ./envkata.out
+```
+
+where `4` is the number of MPI processes.
+
+### Target `clean`
+
+The `clean` target removes files generated during compilation:
+
+```make
+clean:
+        rm -f *.a *.exe *.mod *.o *.out *~
+```
+
+Its purpose is to keep the repository directory tidy and to allow rebuilding from a clean state.
+
+The removed file types are:
+
+* `*.a`
+  Static library files
+
+* `*.exe`
+  Executable files
+
+* `*.mod`
+  Fortran module files generated during compilation
+
+* `*.o`
+  Object files generated from source compilation
+
+* `*.out`
+  Output executables such as `envkata.out`
+
+* `*~`
+  Backup files, often created by text editors
+
+The command
+
+```bash
+make clean
+```
+
+is useful when:
+
+* recompiling everything from scratch
+* avoiding inconsistencies from old object or module files
+* cleaning the repository before sharing or archiving it
+
+---
 
 ## Exciton energy (for $E_{ii}$ database or Kataura plot)
 
@@ -177,7 +285,7 @@ An example input for an alcohol-assisted CVD sample is:
  17  1  2.292  4  3
 ```
 
-## $\kappa$ Regression
+## Least-Squares Regression of $\kappa$
 
 **Main program:** `ROOT/diel/linkapp.f90`
 
