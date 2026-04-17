@@ -2,6 +2,18 @@
 
 This repository contains several computer codes, mostly written in Fortran, used to perform calculations of exciton environmental effects, particularly dielectric constant effects, in single-walled carbon nanotubes (SWNTs).
 
+## Contents of this README file
+
+- [Main functionality of the program](#main-functionality-of-the-program)
+- [First thing first: Check you can do make!](#first-thing-first-check-you-can-do-make)
+- [Exciton energy (for $E_{ii}$ database or Kataura plot)](#exciton-energy-for-e_ii-database-or-kataura-plot)
+- [Optimized $\kappa$](#optimized-kappa)
+- [Least-Squares Regression of $\kappa$](#least-squares-regression-of-kappa)
+- [Energy shift ($\Delta E_{\mathrm{env}}$)](#energy-shift-delta-e_mathrmenv)
+
+---
+
+
 ## Main functionality of the program
 
 The main computational task is the calculation of **exciton energies** for **many different dielectric constants** $\kappa$. Our implementation, published in [Appl. Phys. Lett. 97, 091905 (2010)](https://doi.org/10.1063/1.3485293), is basically based on the work by Jiang *et al.* [Phys. Rev. B **75**, 035407 (2007)] and Sato *et al.* [Phys. Rev. B **76**, 195446 (2007)].
