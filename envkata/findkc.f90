@@ -1,0 +1,202 @@
+
+subroutine findkc(type,nmk1,nmk2,ao,cline,vline,nmkc)
+  != find mu and k region for center-of-mass motion
+  !
+  !=== Notice
+  ! * nline : number of cutting lines 
+  ! * mu    : cutling line index
+  ! * bt    : k vector of starting point on the cutting line
+  ! * up    : k vector of ending point on the cutting line
+  !
+  !=== Input
+  ! * type: exciton type
+  !   * ga: A1 and A2 exciton
+  !   * k1: E exciton
+  !   * k2: E* exciton
+  ! * nmk1 and nmk2: cutting lines around K and K' points from subroutie cutline
+  ! * ao: number of calculating cutting lines
+  !   * all: all cutting lines
+  !   * one: one cutting line
+  !   * two: two cutting lines
+  ! * cline and vline: number of conductance and valence bands (E_{cline}{vline})
+  !
+  !=== Output
+  ! * nmkc
+  ! ** nmkc%mu(i) : the center of mass motion of mu
+  ! ** nmkc%bt(i) : k_vector at starting point on the cutting line
+  ! ** nmkc%up(i) : k_vector at ending point on the cutting line
+  ! ** nmkc%nline : the number of mu (the number of array)
+
+  use common,only : nmmesh, nmcen
+  use common,only:mumx,mu2d
+
+  implicit none
+
+  ! input
+  character(len=2),intent(in) :: type
+  character(len=3),intent(in) :: ao
+  integer,intent(in) :: cline, vline
+  type(nmmesh),intent(in) :: nmk1, nmk2
+
+  ! output
+  type(nmcen),intent(out) :: nmkc
+
+  ! local
+  integer :: nline1, nline2
+  integer,dimension(:),allocatable::mu1,bt1,up1,mu2,bt2,up2,mucom
+  integer nmu,ncom,mu,mutem,arr(4),min,max,bt,up
+  integer :: i, j, i1
+
+  select case(ao)
+  case('all') ! calculate all cutting line
+     select case(type)
+     case('ga') ! A exciton around K or K' point.
+        nline1 = nmk1%nline
+        nline2 = nmk2%nline
+        allocate(mu1(nline1),bt1(nline1),up1(nline1),mu2(nline2),bt2(nline2),up2(nline2))
+        do i = 1, nline1
+           mu1(i) = nmk1%mu(i)
+           bt1(i) = nmk1%bt(i)
+           up1(i) = nmk1%up(i)
+           mu2(i) = mu1(i)
+           bt2(i) = bt1(i)
+           up2(i) = up1(i)
+        end do
+     case('k1') ! E exciton around K point.
+        nline1 = nmk2%nline
+        nline2 = nmk1%nline
+        allocate(mu1(nline1),bt1(nline1),up1(nline1),mu2(nline2),bt2(nline2),up2(nline2))
+        do i = 1, nline1
+           mu1(i) = nmk2%mu(i)
+           bt1(i) = nmk2%bt(i)
+           up1(i) = nmk2%up(i)
+        end do
+        do i = 1, nline2
+           mu2(i) = nmk1%mu(i)
+           bt2(i) = nmk1%bt(i)
+           up2(i) = nmk1%up(i)
+        end do
+     case('k2') ! E* exciton around K' point.
+        nline1 = nmk1%nline
+        nline2 = nmk2%nline
+        allocate(mu1(nline1),bt1(nline1),up1(nline1),mu2(nline2),bt2(nline2),up2(nline2))
+        do i = 1, nline1
+           mu1(i) = nmk1%mu(i)
+           bt1(i) = nmk1%bt(i)
+           up1(i) = nmk1%up(i)
+        end do
+        do i = 1, nline2
+           mu2(i) = nmk2%mu(i)
+           bt2(i) = nmk2%bt(i)
+           up2(i) = nmk2%up(i)
+        end do
+     case default
+     end select
+  case('one') ! calculate one cutting line
+     nline1 = nmk1%nline
+     nline2 = nmk2%nline
+     allocate(mu1(nline1),bt1(nline1),up1(nline1),mu2(nline2),bt2(nline2),up2(nline2))
+     nline1 = 1
+     nline2 = 1
+     select case(type)
+     case('ga') ! A exciton around K or K' point.
+        do i = 1, nline1
+           mu1(i) = nmk1%mu(cline)
+           bt1(i) = nmk1%bt(cline)
+           up1(i) = nmk1%up(cline)
+           mu2(i) = nmk1%mu(vline)
+           bt2(i) = nmk1%bt(vline)
+           up2(i) = nmk1%up(vline)
+        end do
+     case('k1') ! E exciton around K point.
+        do i = 1, nline1
+           mu1(i) = nmk2%mu(cline)
+           bt1(i) = nmk2%bt(cline)
+           up1(i) = nmk2%up(cline)
+        end do
+        do i = 1, nline2
+           mu2(i) = nmk1%mu(vline)
+           bt2(i) = nmk1%bt(vline)
+           up2(i) = nmk1%up(vline)
+        end do
+     case('k2') ! E* exciton around K' point.
+        do i = 1, nline1
+           mu1(i) = nmk1%mu(cline)
+           bt1(i) = nmk1%bt(cline)
+           up1(i) = nmk1%up(cline)
+        end do
+        do i = 1, nline2
+           mu2(i) = nmk2%mu(vline)
+           bt2(i) = nmk2%bt(vline)
+           up2(i) = nmk2%up(vline)
+        end do
+     case default
+     end select     
+  end select
+
+  nmu = 0
+  ncom = 0
+
+  allocate(mucom(nline1*nline2))
+
+  ! find center of mass motion of mu
+  do i = 1, nline1
+     do j = 1, nline2
+        mu = mu1(i) - mu2(j)
+        ncom = ncom + 1
+        mucom(ncom) = mu
+        if(ncom.eq.1) then
+           nmu = nmu + 1
+           nmkc%mu(nmu) = mu
+        else
+           do i1 = 1, ncom - 1
+              if( mu == mucom(i1) ) goto 10
+           end do
+           nmu=nmu+1
+           nmkc%mu(nmu)=mu
+        endif
+        if (nmu.gt.mumx) then
+           write (*,100)
+           stop
+        endif
+10   enddo
+  enddo
+
+  nmkc%nline = nmu
+
+  do i1 = 1, nmu
+     mutem = nmkc%mu(i1)
+     min = 10000
+     max = -10000
+     do i = 1, nline1
+        do j = 1, nline2
+           mu = mu1(i) - mu2(j)
+           if( mu.eq.mutem ) then
+              arr(1) = bt1(i) - bt2(j)
+              arr(2) = bt1(i) - up2(j)
+              arr(3) = up1(i) - bt2(j)
+              arr(4) = up1(i) - up2(j)
+              bt = MINVAL(arr)
+              up = MAXVAL(arr)
+              if( bt.le.min ) min = bt
+              if( up.gt.max ) max = up
+           end if
+        end do
+     end do
+     nmkc%bt(i1) = min
+     nmkc%up(i1) = max
+  end do
+
+  if( ao.eq.'one' ) then
+     if( nmkc%nline.gt.1 ) then
+        write (*,200)
+        stop
+     end if
+  end if
+
+100 format(" >> findkc >> nmumxc too small >> ")
+200 format(" >> findkc >> nmkc%nline is not 1 >> ")
+
+  deallocate (mu1,bt1,up1,mu2,bt2,up2,mucom)
+
+end subroutine findkc

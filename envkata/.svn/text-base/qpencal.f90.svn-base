@@ -1,0 +1,146 @@
+
+subroutine qpencal(mukc,kc,mukv,kv,cc1,cv1,vq1,con,nmq,nmwf2,nmwf3,wfcoe1,wfcoe2,wfcoe3,qev,qec)
+
+  use common,only:nc,nt
+  use common,only:u0
+  use common,only:wfqp
+  use common,only:wfmesh,qmesh
+  use common,only:kcapex,kvapex
+
+  use exkataif,only : cutoff, checkrange
+
+  implicit none
+
+  !input
+  integer mukc,kc,mukv,kv
+  complex*16 cc1(2),cv1(2)
+  complex*16,dimension(:,:,:,:),pointer::vq1
+  real*8,dimension(:,:),pointer::con
+  type(wfqp)::wfcoe1,wfcoe2,wfcoe3
+  type(wfmesh)::nmwf2,nmwf3
+  type(qmesh)::nmq
+
+  !output
+  complex*16,dimension(2,2)::qev,qec
+
+  !local
+  !tbtube
+  integer*4 nb,nd,nu,ns
+  parameter (nb=4,nd=3,nu=64,ns=2)
+  integer*4 nm
+  parameter (nm=nb*ns)
+  integer*4 evflag
+  parameter (evflag=1)
+  real*8 vab(nu,ns,ns)
+  real*8 ener(nm)
+  complex*16 ampl(nm,nm)
+  !wavevector
+  integer kcir,kt
+  !wavefunction
+  complex*16,dimension(2)::cv2,cc2
+  !energy
+  real*8 ev2,ec2
+  integer muq,q,sn,sc
+  !cutoff
+  real*8 gc,gv
+!  real*8, external:: cutoff
+  !FT
+  complex*16 vqt(2,2)
+  !dielectric
+  real*8 cont
+  !condition
+  integer mubt2,muup2,kbt2,kup2
+  integer mubt3,muup3,kbt3,kup3
+  logical cond
+  !other
+  integer i
+  character*3 sub
+
+  sub='qpe'
+
+  mubt2=nmwf2%mubt
+  muup2=nmwf2%muup
+  kbt2=nmwf2%kbt
+  kup2=nmwf2%kup
+
+  mubt3=nmwf3%mubt
+  muup3=nmwf3%muup
+  kbt3=nmwf3%kbt
+  kup3=nmwf3%kup
+
+  !self-energy
+
+  qev=dcmplx(0.0d0,0.0d0)
+  qec=dcmplx(0.0d0,0.0d0)
+
+  !lineloop:do muq=-nc/2,nc/2-1,1
+  !qloop:do q=-nt/2,nt/2-1,1
+
+  lineloop:do i=1,nmq%nline
+     muq=nmq%mu(i)
+     qloop:do q=nmq%bt,nmq%up,1
+
+        kcir=(mukv+muq)
+        kt=(kv+q)
+        if (kvapex.eq.'K1') then
+
+           call checkrange(kcir,mubt2,muup2,kt,kbt2,kup2,kvapex,sub)
+
+           ev2=wfcoe2%ev(kcir,kt)
+           cv2(:)=wfcoe2%cv(kcir,kt,:)
+        else
+
+           call checkrange(kcir,mubt3,muup3,kt,kbt3,kup3,kvapex,sub)
+
+           ev2=wfcoe3%ev(kcir,kt)
+           cv2(:)=wfcoe3%cv(kcir,kt,:)
+        endif
+
+        gv=cutoff(ev2)
+
+        kcir=(mukc+muq)
+        kt=(kc+q)
+        if (kcapex.eq.'K1') then
+
+           call checkrange(kcir,mubt2,muup2,kt,kbt2,kup2,kvapex,sub)
+
+           ec2=wfcoe2%ec(kcir,kt)
+           cc2(:)=wfcoe2%cc(kcir,kt,:)
+        else
+
+           call checkrange(kcir,mubt3,muup3,kt,kbt3,kup3,kvapex,sub)
+
+           ec2=wfcoe3%ec(kcir,kt)
+           cc2(:)=wfcoe3%cc(kcir,kt,:)
+        endif
+
+        gc=cutoff(ec2)
+
+        vqt(:,:)=vq1(:,:,muq,q)
+        cont=1.0d0+con(muq,q)
+
+
+        do sc=1,ns
+           do sn=1,ns
+
+              qev(sn,sc)=qev(sn,sc)-vqt(sn,sc)*conjg(cv1(sn))*cv2(sn)*&
+                   conjg(cv2(sc))*cv1(sc)*gv/cont
+
+              !chek the expression for cv2!
+              qec(sn,sc)=qec(sn,sc)-vqt(sn,sc)*conjg(cc1(sn))*cv2(sn)*&
+                   conjg(cv2(sc))*cc1(sc)*gc/cont
+
+              !chek the expression!
+              !qec(sn,sc)=qec(sn,sc)-vqt(sn,sc)*conjg(cc1(sn))*cc2(sn)*&
+              !conjg(cc2(sc))*cc1(sc)*gc/cont
+
+           enddo
+        enddo
+
+
+     enddo qloop
+  enddo lineloop
+
+  return
+
+end subroutine qpencal

@@ -1,0 +1,429 @@
+
+!-------------------------------------------------------------------------------
+!
+!        file name : tbtube.f
+!          project : tbdftsnt
+!         utilized : tbpot.f,lapack/zhegv
+!     prerequisite : cntgrlib/gcd.f,cntgrlib/tubpar.f
+!    compatibility : Fortran 77
+!
+!-------------------------------------------------------------------------------
+!
+!       subroutine : tbtini,tbtube
+!    last modified : 2004-07-02
+!     date created : 2004-05-11
+!       created by : Georgii Samsonidze <gsm@mgm.mit.edu>
+!      description : tight-binding dispersion for the rolled up carbon nanotube
+!        reference : V. N. Popov, New J. of Phys. 6, 17 (2004)
+!
+!-------------------------------------------------------------------------------
+!
+!       tbtini (t,d,tab,phiab,dab,a1t,a1phi,a2t,a2phi,nab,rab,hab,oab,vab)
+!
+!       input parameters
+!
+!       real*8    t,d,tab,phiab,dab,a1t,a1phi,a2t,a2phi -- see cntgrlib/tubpar.f
+!
+!       output parameters
+!
+!       integer*4 nab(ns,ns) -- number of atom pairs of a given type
+!       real*8    rab(nd,nu,ns,ns) -- interatomic distances for each atom pair
+!       real*8    hab(nb,nb,nu,ns,ns) -- hamiltonian matrix blocks
+!       real*8    oab(nb,nb,nu,ns,ns) -- overlap matrix blocks
+!       real*8    vab(nu,ns,ns) -- repulsive potentials between atom sites
+!
+!-------------------------------------------------------------------------------
+!
+!       tbtube (evflag,kc,kt,nc,nt,nab,rab,hab,oab,ener,ampl)
+!
+!       input parameters
+!
+!       integer*4 evflag -- a flag for calculation of eigenvectors
+!                 evflag=0 do not calculate eigenvectors
+!                 evflag>0 calculate eigenvectors
+!       integer*4 kc -- wavevector in circumferential direction (1-nc/2...nc/2)
+!       integer*4 kt -- wavevector in translational direction (1-nt/2...nt/2)
+!       integer*4 nc -- number of cutting lines in circumferential direction
+!       integer*4 nt -- number of mesh points in translational direction
+!       integer*4 nab -- see tbtini
+!       real*8    rab,hab,oab -- see tbtini
+!
+!       output parameters
+!
+!       real*8     ener(nm) -- electron energies [eV]
+!       complex*16 ampl(nm,nm) -- wavefunction amplitudes
+!
+!-------------------------------------------------------------------------------
+!
+!       nab(sn,sc) [dimensionless] -- number of atom pairs
+!       rab(dt,un,sn,sc) [t,radian,d] -- interatomic distances
+!       hab(bn,bc,un,sn,sc) [eV] -- hamiltonian matrix blocks
+!       oab(bn,bc,un,sn,sc) [dimensionless] -- overlap matrix blocks
+!       vab(un,sn,sc) [eV] -- repulsive potentials between atom sites
+!                 bn=1:nb -- (2s,2px,2py,2pz) atomic orbital at neighbor site
+!                 bc=1:nb -- (2s,2px,2py,2pz) atomic orbital at central site
+!                 dt=1:nd -- (t,phi,d) cylindrical coordinates
+!                 un=1:nab(sn,sc) -- neighbor unit cell index
+!                 sn=1:ns -- (A,B) type of neighbor site
+!                 sc=1:ns -- (A,B) type of central site
+!
+!       ener(1:nm) are sorted increasingly in energy
+!       ener(4)/ener(5) are pi-valence/pi^*-conduction bands
+!       ampl(i,j) is i-th component of normalized j-th eigenvector
+!
+!-------------------------------------------------------------------------------
+!
+!       ne=2 & no=3 & nb=4 & nd=3 & nu=64 & ns=2 & nm=nb*ns
+!       e2s=-13.573[eV] & e2p=-4.882[eV] & ef=-4.24778676[eV]
+!       auc=sqrt(3)*acc & acc=0.142[nm] & auc=0.246[nm]
+!       K=(2*pi/sqrt(3),2*pi/3) & K'=(2*pi/sqrt(3),-2*pi/3)
+!
+!-------------------------------------------------------------------------------
+
+	subroutine tbtini (t,d,tab,phiab,dab,a1t,a1phi,a2t,a2phi,nab,rab,hab,oa&
+     &b,vab)
+	implicit none
+	integer*4 no,nb,nd,nu,ns
+	parameter (no=3,nb=4,nd=3,nu=64,ns=2)
+	real*8 t,d,tab,phiab,dab,a1t,a1phi,a2t,a2phi
+	integer*4 nab(ns,ns)
+	real*8 rab(nd,nu,ns,ns)
+	real*8 hab(nb,nb,nu,ns,ns)
+	real*8 oab(nb,nb,nu,ns,ns)
+	real*8 vab(nu,ns,ns)
+	real*8 pi,sr3
+	parameter (pi=+0.3141592653589793d+01,sr3=+0.1732050807568877d+01)
+	real*8 acc,auc
+	parameter (acc=+0.142d+00,auc=acc*sr3)
+	real*8 bohr,cutoff
+	parameter (bohr=+0.5291772108d-01,cutoff=+0.1d+02*bohr)
+	real*8 eps
+	parameter (eps=+0.1d-08)
+	integer*4 sc,sn,un,unmax,un1,un2,i,j,k,l
+	real*8 cylcut,fsc,fsn,fun1,fun2
+	real*8 tc,phic,dc,tn,phin,dn,xc,yc,zc,xn,yn,zn,x,y,z,r
+	real*8 xr,yr,zr,xti,yti,zti,xto,yto,zto,lr,lti,lto
+	real*8 pcn(nd,nd),pco(nd,nd),pno(nd,nd)
+	real*8 pci(nd),pnf(nd)
+	real*8 tbt(no,no),tbs(no,no)
+	real*8 tbv
+
+	if (d.gt.cutoff) then
+	cylcut=d*dasin(cutoff/d)
+	elseif (d.lt.cutoff) then
+	cylcut=dsqrt((d*pi/2.0d0)**2+(cutoff**2-d**2))
+	else
+	cylcut=d*pi/2.0d0
+	endif
+	unmax=idint((cylcut*2.0d0/sr3+acc*2.0d0)/auc)+1
+	do sc=1,ns
+	fsc=dfloat(sc)-1.5d0
+	tc=t*tab*fsc
+	phic=phiab*fsc
+	dc=d*(1.0d0+dab*fsc)
+	xc=0.5d0*dc*dcos(phic)
+	yc=0.5d0*dc*dsin(phic)
+	zc=tc
+	do sn=1,ns
+	fsn=dfloat(sn)-1.5d0
+	un=0
+	do un1=-unmax,unmax
+	fun1=dfloat(un1)
+	do un2=-unmax,unmax
+	if (un1.ne.0.or.un2.ne.0.or.sn.ne.sc) then
+	fun2=dfloat(un2)
+	phin=a1phi*fun1+a2phi*fun2+phiab*fsn
+	if (phin.gt.-pi+eps.and.phin.le.pi+eps) then
+	tn=t*(a1t*fun1+a2t*fun2+tab*fsn)
+	dn=d*(1.0d0+dab*fsn)
+	xn=0.5d0*dn*dcos(phin)
+	yn=0.5d0*dn*dsin(phin)
+	zn=tn
+	x=xn-xc
+	y=yn-yc
+	z=zn-zc
+	r=dsqrt(x**2+y**2+z**2)
+	if (r.le.cutoff) then
+	un=un+1
+	if (un.gt.nu) then
+	write(*,100)
+	stop
+	endif
+	rab(1,un,sn,sc)=(tn-tc)/t
+	rab(2,un,sn,sc)=(phin-phic)
+	rab(3,un,sn,sc)=(dn-dc)/d
+	call tbpot (r,tbt,tbs,tbv)
+	vab(un,sn,sc)=tbv
+
+	xr=xn-xc
+	yr=yn-yc
+	zr=zn-zc
+	lr=dsqrt(xr**2+yr**2+zr**2)
+	if (lr.lt.eps) then
+	write(*,111)
+	stop
+	endif
+	xr=xr/lr
+	yr=yr/lr
+	zr=zr/lr
+	if (dabs(xr).gt.eps.or.dabs(yr).gt.eps) then
+	if (yr.gt.+0.0d+00) then
+	xto=+yr
+	yto=-xr
+	zto=+0.0d+00
+	else
+	xto=-yr
+	yto=+xr
+	zto=+0.0d+00
+	endif
+	else
+	xto=xn+xc
+	yto=yn+yc
+	zto=+0.0d+00
+	lto=dsqrt(xto**2+yto**2+zto**2)
+	if (lto.lt.eps) then
+	xto=+0.1d+01
+	yto=+0.0d+00
+	zto=+0.0d+00
+	endif
+	endif
+	lto=dsqrt(xto**2+yto**2+zto**2)
+	if (lto.lt.eps) then
+	write(*,113)
+	stop
+	endif
+	xto=xto/lto
+	yto=yto/lto
+	zto=zto/lto
+	xti=yto*zr-zto*yr
+	yti=zto*xr-xto*zr
+	zti=xto*yr-yto*xr
+	lti=dsqrt(xti**2+yti**2+zti**2)
+	if (lti.lt.1.0d0-eps.or.lti.gt.1.0d0+eps) then
+	write(*,112)
+	stop
+	endif
+	xti=xti/lti
+	yti=yti/lti
+	zti=zti/lti
+
+	pcn(1,1)=xr
+	pcn(2,1)=yr
+	pcn(3,1)=zr
+	pcn(1,2)=xti
+	pcn(2,2)=yti
+	pcn(3,2)=zti
+	pcn(1,3)=xto
+	pcn(2,3)=yto
+	pcn(3,3)=zto
+
+	pco(1,1)=dcos(phic)
+	pco(2,1)=dsin(phic)
+	pco(3,1)=0.0d0
+	pco(1,2)=-dsin(phic)
+	pco(2,2)=dcos(phic)
+	pco(3,2)=0.0d0
+	pco(1,3)=0.0d0
+	pco(2,3)=0.0d0
+	pco(3,3)=1.0d0
+
+	pno(1,1)=dcos(phin)
+	pno(2,1)=dsin(phin)
+	pno(3,1)=0.0d0
+	pno(1,2)=-dsin(phin)
+	pno(2,2)=dcos(phin)
+	pno(3,2)=0.0d0
+	pno(1,3)=0.0d0
+	pno(2,3)=0.0d0
+	pno(3,3)=1.0d0
+
+	hab(1,1,un,sn,sc)=+tbt(1,1)
+	oab(1,1,un,sn,sc)=+tbs(1,1)
+
+	do j=2,nb
+	pnf(1)=0.0d0
+	do l=1,nd
+	pnf(1)=pnf(1)+pcn(l,1)*pno(l,j-1)
+	enddo
+	hab(j,1,un,sn,sc)=+tbt(2,1)*pnf(1)
+	oab(j,1,un,sn,sc)=+tbs(2,1)*pnf(1)
+	enddo
+
+	do i=2,nb
+	pci(1)=0.0d0
+	do l=1,nd
+	pci(1)=pci(1)+pcn(l,1)*pco(l,i-1)
+	enddo
+	hab(1,i,un,sn,sc)=+tbt(1,2)*pci(1)
+	oab(1,i,un,sn,sc)=+tbs(1,2)*pci(1)
+	enddo
+
+	do i=2,nb
+	do j=2,nb
+	do k=1,nd
+	pci(k)=0.0d0
+	pnf(k)=0.0d0
+	enddo
+	do k=1,nd
+	do l=1,nd
+	pci(k)=pci(k)+pcn(l,k)*pco(l,i-1)
+	pnf(k)=pnf(k)+pcn(l,k)*pno(l,j-1)
+	enddo
+	enddo
+	hab(j,i,un,sn,sc)=+tbt(2,2)*pci(1)*pnf(1)+tbt(3,3)*pci(2)*pnf(2)+tbt(3,&
+     &3)*pci(3)*pnf(3)
+	oab(j,i,un,sn,sc)=+tbs(2,2)*pci(1)*pnf(1)+tbs(3,3)*pci(2)*pnf(2)+tbs(3,&
+     &3)*pci(3)*pnf(3)
+	enddo
+	enddo
+
+	endif
+	endif
+	endif
+	enddo
+	enddo
+	nab(sn,sc)=un
+	enddo
+	enddo
+
+	return
+100	format(" >> tbdftsnt >> tbtube >> tbtini >> nab exceeds nu >> ")
+111	format(" >> tbdftsnt >> tbtube >> tbtini >> lr >> out of range >> ")
+112	format(" >> tbdftsnt >> tbtube >> tbtini >> lti >> out of range >> "&
+     &)
+113	format(" >> tbdftsnt >> tbtube >> tbtini >> lto >> out of range >> "&
+     &)
+	end subroutine tbtini
+
+!-------------------------------------------------------------------------------
+
+	subroutine tbtube (evflag,kc,kt,nc,nt,nab,rab,hab,oab,ener,ampl)
+	implicit none
+	integer*4 ne,nb,nd,nu,ns
+	parameter (ne=2,nb=4,nd=3,nu=64,ns=2)
+	integer*4 nm
+	parameter (nm=nb*ns)
+	integer*4 evflag,kc,kt,nc,nt
+!
+	integer*4 nab(ns,ns)
+	real*8 rab(nd,nu,ns,ns)
+	real*8 hab(nb,nb,nu,ns,ns)
+	real*8 oab(nb,nb,nu,ns,ns)
+	real*8 ener(nm)
+	complex*16 ampl(nm,nm)
+	real*8 onsite(ne)
+	parameter (onsite=(/-0.13573d+02,-0.4882d+01/))
+	real*8 ef
+	parameter (ef=-0.424778676d+01)
+	real*8 pi
+	parameter (pi=+0.3141592653589793d+01)
+	complex*16 c0,c1
+	parameter (c0=(+0.0d+00,+0.0d+00))
+	parameter (c1=(+0.1d+01,+0.0d+00))
+	integer*4 i,j,bc,bn,sc,sn,un
+	real*8 fkt,fkphi
+	complex*16 pf
+	complex*16 h(nm,nm),o(nm,nm)
+!=begin=lapack=data=!
+	integer*4 n
+	parameter (n=nm)
+	character*1 jobz,ceval,cevec,uplo
+	parameter (ceval='N',cevec='V',uplo='U')
+	integer*4 itype,lda,ldb,lwork,lrwork,info
+	parameter (itype=1,lda=n,ldb=n,lwork=(32+1)*n,lrwork=3*n-2)
+	complex*16 a(lda,n)
+	complex*16 b(ldb,n)
+	real*8 w(n)
+	complex*16 work(lwork)
+	real*8 rwork(lrwork)
+!=end=lapack=data=!
+
+	fkt=dfloat(kt)/dfloat(nt)*2.0d0*pi
+	fkphi=dfloat(kc)
+
+	do i=1,ns
+	h(1+(i-1)*nb,1+(i-1)*nb)=dcmplx(onsite(1),0.0d0)
+	do j=2,nb
+	h(j+(i-1)*nb,j+(i-1)*nb)=dcmplx(onsite(2),0.0d0)
+	enddo
+	enddo
+	do i=1,nm
+	do j=1,i-1
+	h(j,i)=c0
+	enddo
+	do j=i+1,nm
+	h(j,i)=c0
+	enddo
+	enddo
+	do i=1,nm
+	o(i,i)=c1
+	enddo
+	do i=1,nm
+	do j=1,i-1
+	o(j,i)=c0
+	enddo
+	do j=i+1,nm
+	o(j,i)=c0
+	enddo
+	enddo
+
+	do sc=1,ns
+	bc=nb*(sc-1)
+	do sn=1,ns
+	bn=nb*(sn-1)
+	do un=1,nab(sn,sc)
+	pf=cdexp(dcmplx(0.0d0,-fkt*rab(1,un,sn,sc)-fkphi*rab(2,un,sn,sc)))
+	do i=1,nb
+	do j=1,nb
+	h(j+bn,i+bc)=h(j+bn,i+bc)+pf*dcmplx(hab(j,i,un,sn,sc),0.0d0)
+	enddo
+	enddo
+	do i=1,nb
+	do j=1,nb
+	o(j+bn,i+bc)=o(j+bn,i+bc)+pf*dcmplx(oab(j,i,un,sn,sc),0.0d0)
+	enddo
+	enddo
+	enddo
+	enddo
+	enddo
+
+!=begin=lapack=code=!
+	if (evflag.eq.0) then
+	jobz=ceval
+	else
+	jobz=cevec
+	endif
+	do i=1,n
+	do j=1,n
+	a(j,i)=h(j,i)
+	enddo
+	enddo
+	do i=1,n
+	do j=1,n
+	b(j,i)=o(j,i)
+	enddo
+	enddo
+	call zhegv (itype,jobz,uplo,n,a,lda,b,ldb,w,work,lwork,rwork,info)
+	if (info.ne.0) then
+	write(*,100)
+	stop
+	endif
+	do i=1,n
+	ener(i)=w(i)-ef
+	enddo
+	if (evflag.ne.0) then
+	do i=1,n
+	do j=1,n
+	ampl(j,i)=a(j,i)
+	enddo
+	enddo
+	endif
+!=end=lapack=code=!
+
+	return
+100	format(" >> tbdftsnt >> tbtube >> lapack >> zhegv >> info >> overflo&
+     &w >> ")
+	end subroutine tbtube
+
+!-------------------------------------------------------------------------------
+

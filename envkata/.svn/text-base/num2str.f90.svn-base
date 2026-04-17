@@ -1,0 +1,28 @@
+
+character(4) function num2str(nn,mm)
+
+  integer,intent(in) :: nn, mm
+
+  integer :: k
+  character(len=1) :: n1, n2, m1, m2
+  integer,parameter :: AZ = 48
+  ! Ascii character number of Zero. See "man ascii".
+
+  if( (nn<0).or.(99<nn) ) stop 'num2str expects n=0..99'
+  if( (mm<0).or.(nn<mm) ) stop 'num2str expects m=0..n'
+
+  k = nn / 10
+  n1 = char(AZ+k)
+
+  k = mod(nn,10)
+  n2 = char(AZ+k)
+
+  k = mm / 10
+  m1 = char(AZ+k)
+
+  k = mod(mm,10)
+  m2 = char(AZ+k)
+
+  num2str = n1//n2//m1//m2
+
+end function num2str

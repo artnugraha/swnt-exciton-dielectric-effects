@@ -1,0 +1,63 @@
+subroutine wflinecb(nmk1,nmk2,nmwf1,nmwf2,nmwf3)
+use common,only:nmmesh,wfmesh,mu2d
+use common,only:nc,nt
+implicit none
+!input
+type(nmmesh)::nmk1,nmk2
+!output
+type(wfmesh)::nmwf1,nmwf2,nmwf3
+!local
+integer nline,tbt,tup,cbt,cup
+integer,pointer::tbtarr(:),tuparr(:)
+integer,pointer::carr(:)
+integer i
+
+
+nline=nmk1%nline
+allocate (tbtarr(nline),tuparr(nline),carr(nline))
+do i=1,nline
+tbtarr(i)=nmk1%bt(i)
+tuparr(i)=nmk1%up(i)
+carr(i)=nmk1%mu(i)
+enddo
+tbt=MINVAL(tbtarr)
+tup=MAXVAL(tuparr)
+cbt=MINVAL(carr)
+cup=MAXVAL(carr)
+
+nmwf2%mubt=nmwf1%mubt+cbt
+nmwf2%muup=nmwf1%muup+cup
+nmwf2%nline=nmwf2%muup-nmwf2%mubt+1
+nmwf2%kbt=nmwf1%kbt+tbt
+nmwf2%kup=nmwf1%kup+tup
+nmwf2%point=nmwf2%kup-nmwf2%kbt+1
+
+deallocate (tbtarr,tuparr,carr)
+
+nline=nmk2%nline
+allocate (tbtarr(nline),tuparr(nline),carr(nline))
+do i=1,nline
+tbtarr(i)=nmk2%bt(i)
+tuparr(i)=nmk2%up(i)
+carr(i)=nmk2%mu(i)
+enddo
+tbt=MINVAL(tbtarr)
+tup=MAXVAL(tuparr)
+cbt=MINVAL(carr)
+cup=MAXVAL(carr)
+
+
+nmwf3%mubt=nmwf1%mubt+cbt
+nmwf3%muup=nmwf1%muup+cup
+nmwf3%nline=nmwf3%muup-nmwf3%mubt+1
+nmwf3%kbt=nmwf1%kbt+tbt
+nmwf3%kup=nmwf1%kup+tup
+nmwf3%point=nmwf3%kup-nmwf3%kbt+1
+
+
+deallocate (tbtarr,tuparr,carr)
+
+
+100 format(" >> wfline >> muqp is too small >> ")
+
+end subroutine wflinecb

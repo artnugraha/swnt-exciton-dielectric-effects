@@ -1,0 +1,255 @@
+
+!-------------------------------------------------------------------------------
+!
+!        file name : tbpot.f
+!          project : tbdftsnt
+!         utilized : none
+!     prerequisite : none
+!    compatibility : Fortran 77
+!
+!-------------------------------------------------------------------------------
+!
+!       subroutine : tbpot
+!    last modified : 2004-05-14
+!     date created : 2004-05-04
+!       created by : Georgii Samsonidze <gsm@mgm.mit.edu>
+!      description : tight-binding potentials for carbon orbitals
+!      description : transfer and overlap integrals and repulsive potentials
+!        reference : D. Porezag et al., Phys. Rev. B 51, 12947 (1995)
+!
+!-------------------------------------------------------------------------------
+!
+!       tbpot (r,t,s,v)
+!
+!       input parameters
+!
+!       real*8 r -- interatomic distance [nm]
+!
+!       output parameters
+!
+!       real*8 t(no,no) -- transfer integral [eV]
+!       real*8 s(no,no) -- overlap integral [dimensionless]
+!       real*8 v -- repulsive potential [eV]
+!
+!-------------------------------------------------------------------------------
+!
+!       t(on,oc) [eV] -- transfer integral
+!       s(on,oc) [dimensionless] -- overlap integral
+!                on=1:no -- (s,sigma,pi) molecular orbital at neighbor site
+!                oc=1:no -- (s,sigma,pi) molecular orbital at central site
+!
+!-------------------------------------------------------------------------------
+!
+!       (on,oc)=(1,1),(2,1),(1,2),(2,2),(3,3) are different from zero
+!       (on,oc)=(3,1),(3,2),(1,3),(2,3) are equal to zero
+!
+!-------------------------------------------------------------------------------
+!
+!       no=3
+!
+!-------------------------------------------------------------------------------
+
+	subroutine tbpot (r,t,s,v)
+	implicit none
+	integer*4 no
+	parameter (no=3)
+	real*8 r
+	real*8 t(no,no)
+	real*8 s(no,no)
+	real*8 v
+	real*8 bohr,hartree
+	parameter (bohr=+0.5291772108d-01,hartree=+0.272113845d+02)
+	real*8 ct(10,4),cs(10,4)
+	real*8 cv(10)
+
+	data ct / -0.4663805d0,+0.3528951d0,-0.1402985d0,+0.0050519d0,         &
+     &            +0.0269723d0,-0.0158810d0,+0.0036716d0,               &
+     &            +0.0010301d0,-0.0015546d0,+0.0008601d0,               &
+     &            +0.3395418d0,-0.2250358d0,+0.0298224d0,+0.0653476d0,  &
+     &            -0.0605786d0,+0.0298962d0,-0.0099609d0,               &
+     &            +0.0020609d0,+0.0001264d0,-0.0003381d0,               &
+     &            +0.2422701d0,-0.1315258d0,-0.0372696d0,+0.0942352d0,  &
+     &            -0.0673216d0,+0.0316900d0,-0.0117293d0,               &
+     &            +0.0033519d0,-0.0004838d0,-0.0000906d0,               &
+     &            -0.3793837d0,+0.3204470d0,-0.1956799d0,+0.0883986d0,  &
+     &            -0.0300733d0,+0.0074465d0,-0.0008563d0,               &
+     &            -0.0004453d0,+0.0003842d0,-0.0001855d0 /
+
+	data cs / +0.4728644d0,-0.3661623d0,+0.1594782d0,-0.0204934d0,         &
+     &            -0.0170732d0,+0.0096695d0,-0.0007135d0,               &
+     &            -0.0013826d0,+0.0007849d0,-0.0002005d0,               &
+     &            -0.3662838d0,+0.2490285d0,-0.0431248d0,-0.0584391d0,  &
+     &            +0.0492775d0,-0.0150447d0,-0.0010758d0,               &
+     &            +0.0027734d0,-0.0011214d0,+0.0002303d0,               &
+     &            -0.1359608d0,+0.0226235d0,+0.1406440d0,-0.1573794d0,  &
+     &            +0.0753818d0,-0.0108677d0,-0.0075444d0,               &
+     &            +0.0051533d0,-0.0013747d0,+0.0000751d0,               &
+     &            +0.3715732d0,-0.3070867d0,+0.1707304d0,-0.0581555d0,  &
+     &            +0.0061645d0,+0.0051460d0,-0.0032776d0,               &
+     &            +0.0009119d0,-0.0001265d0,-0.0000227d0 /
+
+	data cv / +2.2681036d0,-1.9157174d0,+1.1677745d0,-0.5171036d0,         &
+     &            +0.1529242d0,-0.0219294d0,-0.0000002d0,               &
+     &            -0.0000001d0,-0.0000005d0,+0.0000009d0 /
+
+	real*8 x
+	real*8 y
+	real*8 zt
+	real*8 zs
+	real*8 zv
+	real*8 x1
+	real*8 x2
+	real*8 v0
+	real*8 v1
+	real*8 v2
+	real*8 t0(4)
+	real*8 t1(4)
+	real*8 t2(4)
+	real*8 s0(4)
+	real*8 s1(4)
+	real*8 s2(4)
+	real*8 b(10)
+	integer*4 i
+	integer*4 j
+
+	x=dabs(r)/bohr
+
+	if (x.le.6.5d0) then
+
+	y=(x-4.0d0)/3.0d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	do i=1,4
+	zt=0.0d0
+	zs=0.0d0
+	do j=1,10
+	zt=zt+ct(j,i)*b(j)
+	zs=zs+cs(j,i)*b(j)
+	enddo
+	t0(i)=hartree*zt
+	s0(i)=zs
+	enddo
+
+	else
+
+	x1=6.5d0
+	y=(x1-4.0d0)/3.0d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	do i=1,4
+	zt=0.0d0
+	zs=0.0d0
+	do j=1,10
+	zt=zt+ct(j,i)*b(j)
+	zs=zs+cs(j,i)*b(j)
+	enddo
+	t1(i)=hartree*zt
+	s1(i)=zs
+	enddo
+	x2=6.48d0
+	y=(x2-4.0d0)/3.0d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	do i=1,4
+	zt=0.0d0
+	zs=0.0d0
+	do j=1,10
+	zt=zt+ct(j,i)*b(j)
+	zs=zs+cs(j,i)*b(j)
+	enddo
+	t2(i)=hartree*zt
+	s2(i)=zs
+	enddo
+	do i=1,4
+	t0(i)=t1(i)*dexp((x1-x)/(x1-x2)*dlog(t2(i)/t1(i)))
+	s0(i)=s1(i)*dexp((x1-x)/(x1-x2)*dlog(s2(i)/s1(i)))
+	enddo
+
+	endif
+
+	if (x.le.4.05d0) then
+
+	y=(x-2.55d0)/1.55d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	zv=0.0d0
+	do j=1,10
+	zv=zv+cv(j)*b(j)
+	enddo
+	v0=hartree*zv
+
+	else
+
+	x1=4.05d0
+	y=(x1-2.55d0)/1.55d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	zv=0.0d0
+	do j=1,10
+	zv=zv+cv(j)*b(j)
+	enddo
+	v1=hartree*zv
+	x2=4.04d0
+	y=(x2-2.55d0)/1.55d0
+	b(1)=1.0d0
+	b(2)=y
+	do j=3,10
+	b(j)=2.0d0*y*b(j-1)-b(j-2)
+	enddo
+	b(1)=b(1)-0.5d0
+	zv=0.0d0
+	do j=1,10
+	zv=zv+cv(j)*b(j)
+	enddo
+	v2=hartree*zv
+	v0=v1*dexp((x1-x)/(x1-x2)*dlog(v2/v1))
+
+	endif
+
+	t(1,1)=+t0(1)
+	t(2,1)=+t0(2)
+	t(3,1)=+0.0d+00
+	t(1,2)=-t0(2)
+	t(2,2)=+t0(3)
+	t(3,2)=+0.0d+00
+	t(1,3)=+0.0d+00
+	t(2,3)=+0.0d+00
+	t(3,3)=+t0(4)
+
+	s(1,1)=+s0(1)
+	s(2,1)=+s0(2)
+	s(3,1)=+0.0d+00
+	s(1,2)=-s0(2)
+	s(2,2)=+s0(3)
+	s(3,2)=+0.0d+00
+	s(1,3)=+0.0d+00
+	s(2,3)=+0.0d+00
+	s(3,3)=+s0(4)
+
+	v=v0
+
+	return
+	end subroutine tbpot
+
+!-------------------------------------------------------------------------------
+

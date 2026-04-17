@@ -1,0 +1,85 @@
+
+MK_HOME = $(HOME)/src/mk
+USE_IMKL = yes
+include $(MK_HOME)/for.mk
+include $(MK_HOME)/lapack.mk
+
+#LIBDIR = $(HOME)/for/libjiang
+#FFLAGS = -static -w -Vaxlib -llapack -lblas -lg2c
+
+exkatampi:
+	mpif90 $(F90FLAGS) exkatampi.f90 $(LAPACK) -o exkatampi.out
+
+exkata: lib
+	$(FC) $(FFLAGS) -I$(LIBDIR) $(LIBDIR)/*.o exkata.f90 $(LAPACK) -o exkata.out
+
+
+
+ttbtube.out: lib ttbtube.for
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) ttbtube.for \
+-o ttbtube.out
+
+diat.out: lib diat.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) diat.f90 \
+-o diat.out
+
+cutlinet.out: lib cutlinet.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) cutlinet.f90 \
+-o cutlinet.out
+
+wflinet.out: lib wflinet.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) wflinet.f90 \
+-o wflinet.out
+
+wfcoet.out: lib wfcoet.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) wfcoet.f90 \
+-o wfcoet.out
+
+diat-old.out: lib diat-old.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) diat-old.f90 \
+-o diat-old.out
+
+qpencalt.out: lib qpencalt.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) qpencalt.f90 \
+-o qpencalt.out
+
+qpencalt-old.out: lib qpencalt-old.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) qpencalt-old.f90 \
+-o qpencalt-old.out
+
+excitont.out: lib excitont.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) excitont.f90 \
+-o excitont.out
+
+wfcoecbit.out: lib wfcoecbit.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) wfcoecbit.f90 \
+-o wfcoecbit.out
+
+wfcoecbt.out: lib wfcoecbt.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) wfcoecbt.f90 \
+-o wfcoecbt.out
+
+diacbt.out: lib diacbt.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) diacbt.f90 \
+-o diacbt.out
+
+findkct.out: lib findkct.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) findkct.f90 \
+-o findkct.out
+
+findkrt.out: lib findkrt.f90
+	$(FC) -I$(LIBDIR) $(LIBDIR)/*.o $(FFLAGS)  $(LAPACK) findkrt.f90 \
+-o findkrt.out
+
+
+
+lib:
+	make -C $(LIBDIR)
+
+clean:
+	rm -f *.a *.mod *.o *.out *~
+
+libclean:
+	make -C $(LIBDIR) clean
+
+allclean: clean libclean

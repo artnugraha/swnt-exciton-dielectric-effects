@@ -1,0 +1,56 @@
+G95 module created on Mon Jul 25 14:41:59 2011 from errorbar.f90
+If you edit this, you'll get what you deserve.
+module-version 9
+(() () () () () () () () () () () () () () () () () () () () ())
+
+()
+
+()
+
+()
+
+()
+
+(2 'c0' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+REAL 8) 0 0 () (CONSTANT (REAL 8) 0 '5029682823036928' 0 1051) () () ''
+() ())
+3 'dttheta' 'eiimudt' 1 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
+DIMENSION) (REAL 8) 0 0 () (3 EXPLICIT (CONSTANT (INTEGER 8) 0 '1') (
+CONSTANT (INTEGER 8) 0 '40') (CONSTANT (INTEGER 8) 0 '0') (CONSTANT (
+INTEGER 8) 0 '30') (CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0
+'2')) () '' () ())
+4 'eii' 'eiimudt' 1 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
+DIMENSION) (REAL 8) 0 0 () (5 EXPLICIT (CONSTANT (INTEGER 8) 0 '1') (
+CONSTANT (INTEGER 8) 0 '40') (CONSTANT (INTEGER 8) 0 '0') (CONSTANT (
+INTEGER 8) 0 '30') (CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0
+'4') (CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0 '80') (
+CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0 '2')) () '' () ())
+5 'eiimudt' 'eiimudt' 1 ((MODULE UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+UNKNOWN) 0 0 () () () '' () ())
+6 'hbar' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+REAL 8) 0 0 () (CONSTANT (REAL 8) 0 '6675061672380294' 0 972) () () '' ()
+())
+7 'init' 'eiimudt' 1 ((PROCEDURE UNKNOWN MODULE-PROC DECL NONE NONE
+SUBROUTINE) (PROCEDURE 0) 0 0 () () () '' () ())
+8 'kb' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (REAL
+8) 0 0 () (CONSTANT (REAL 8) 0 '6358476947335364' 0 1009) () () '' () ())
+9 'm0' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (REAL
+8) 0 0 () (CONSTANT (REAL 8) 0 '8778894426966589' 0 1041) () () '' () ())
+10 'mu' 'eiimudt' 1 ((VARIABLE UNKNOWN UNKNOWN UNKNOWN NONE NONE
+DIMENSION) (REAL 8) 0 0 () (4 EXPLICIT (CONSTANT (INTEGER 8) 0 '1') (
+CONSTANT (INTEGER 8) 0 '40') (CONSTANT (INTEGER 8) 0 '0') (CONSTANT (
+INTEGER 8) 0 '30') (CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0
+'20') (CONSTANT (INTEGER 8) 0 '1') (CONSTANT (INTEGER 8) 0 '3')) () '' ()
+())
+11 'nkapp' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+INTEGER 8) 0 0 () (CONSTANT (INTEGER 8) 0 '80') () () '' () ())
+12 'pi' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+REAL 8) 0 0 () (CONSTANT (REAL 8) 0 '7074237752028440' 0 1024) () () ''
+() ())
+13 'tr' 'eiimudt' 1 ((PARAMETER UNKNOWN UNKNOWN UNKNOWN NONE NONE) (
+REAL 8) 0 0 () (CONSTANT (REAL 8) 0 '5277655813324800' 0 1031) () () ''
+() ())
+)
+
+('c0' 0 2 'dttheta' 0 3 'eii' 0 4 'eiimudt' 0 5 'hbar' 0 6 'init' 0 7 'kb'
+0 8 'm0' 0 9 'mu' 0 10 'nkapp' 0 11 'pi' 0 12 'tr' 0 13)

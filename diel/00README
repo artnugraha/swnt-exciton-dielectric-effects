@@ -1,0 +1,30 @@
+compilation of environmental effect utilities.
+by: art.nugraha
+
+DATABASE:
+
+[1] mu.dat <-- effective mass data
+	
+	how to use:
+	mu(n,m,i,1) <-- electron mass
+	mu(n,m,i,2) <-- hole mass
+	mu(n,m,i,3) <-- electron-hole mass
+		
+[2] eii.dat <-- eii, lk, dt, and theta data
+
+	how to use:
+	Eii(n,m,i,nkapp,1) <-- eii
+	Eii(n,m,i,nkapp,2) <-- lk
+	dttheta(n,m,1) <-- dt
+	dttheta(n,m,2) <-- theta
+
+FORTRAN CODES:
+
+[1] envrout.f90 <-- database module and useful "find" subroutines
+
+	eiimudt summarizes the eiimudt database
+
+[2] conkapeii.f90 <-- check eii calculation from optimized kappa data
+
+	this will give an original input of experimental eii for
+	any samples

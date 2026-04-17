@@ -1,0 +1,218 @@
+!
+!= Description
+! 1. search vHSs and physical quantities at vHSs
+!
+!== Notice
+! 1. module common must be complied first
+!
+!== Contact List
+! 1. Jie Jiang (mailto:jiang@chips.ncsu.edu)
+! 2. Kentaro Sato (mailto:kentaro@flex.phys.tohoku.ac.jp)
+!
+subroutine cutline(center,nmke)
+  !== search vHSs and physical quantities
+  !
+  ! nline:: number of cutting lines passing near K or K' point
+  ! bt:: k vector of starting point on the cutting line
+  ! up:: k vector of ending point on the cutting line
+  ! vhse:: k vector at vHS
+  ! vhsk:: energy at vHs
+
+  use common,only : mu2d, kbase1, kbase2, nmmesh
+  use common,only : nc, nt, tt
+  use common,only : nab, rab, hab, oab
+
+  use exkataif,only : eg3
+  use exkataparameter,only : K_1, K_2, EGresult
+
+  implicit none
+
+  ! input
+  integer,intent(in) :: center
+  ! K (center=1) or K' (center=2) point
+
+  ! output
+  type(nmmesh),intent(out) :: nmke
+  ! wave vector, pi band energy information
+  !
+  ! * nmke%mu(i) : cutting line number (mu)
+  ! * nmke%bt(i) : k_vector at starting point on the cutting line
+  ! * nmke%up(i) : k_vector at ending point on the cutting line
+  ! * nmke%vhse(i) : min energy on the cuttingline
+  ! * nmke%vhsec(i) : min conduction band energy
+  ! * nmke%vhsev(i) : min valence band energy
+  ! * nmke%vhsk(i) : k_vector of vHSs point
+  ! * nmke%nline : number of array
+
+  !---------------------------------------------------------------------
+  ! Local variables
+  !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+  !type
+  type(EGresult) :: e_3
+
+  real(8) e
+  !region
+  real(8) bl(2), br(2)
+  !judgement
+  logical conditionx,conditiony
+  real(8) Emin,Emax,kvec(2)
+  !real(8), parameter::fmax=0.8d0
+  real(8), parameter::fmax=1.5d0
+  !arrangment
+  integer, dimension(mu2d)::muarry1,muarry2
+  integer,dimension(mu2d)::btarry1,uparry1,btarry2,uparry2,vhsk1,vhsk2
+  real(8),dimension(mu2d)::vhse1,vhsec1,vhsec2,vhsev1,vhsev2
+  real(8),dimension(:),allocatable::vhse2,musort
+  !tbtube
+  integer(4) nb,nd,nu,ns
+  parameter (nb=4,nd=3,nu=64,ns=2)
+  integer(4) nm
+  parameter (nm=nb*ns)
+  integer(4) evflag
+  parameter (evflag=0)
+  real(8) ener(nm)
+  complex(8) ampl(nm,nm)
+  !wave vector
+  integer kc,kt
+  !constants
+  real(8) pi,sr3
+  parameter (pi=+0.3141592653589793d+01,sr3=+0.1732050807568877d+01)
+  real(8) acc,auc
+  parameter (acc=0.142,auc=acc*sr3)
+  !other
+  integer nline,number,mu,mu1,i,j
+  integer bt,up,vk
+  real(8) ktry,ve,vec,vev,ec,ev
+  integer(4) error
+!  integer(4), parameter::nt2d=2500
+  integer(4), parameter::nt2d=3000
+  !     DSORT sorts an array and optionally make the same interchanges in
+  !     an auxiliary array.  The array may be sorted in increasing
+  !     or decreasing order.
+
+  ! define zone boundary
+  select case(center)
+  case(1) ! around K_1
+     bl = K_1(:) - (/ K_1(1)/2 , K_1(2) /)
+     br = K_1(:) + (/ K_1(1)/2 , ((K_2(2)-K_1(2))/2) /)
+!     br = K_1(:) + (/ 2*K_1(1)/3 , ((K_2(2)-K_1(2))/2) /)
+  case(2) ! around K_4
+     bl = K_1(:) + (/ K_1(1)/2 , (K_2(2)-K_1(2))/2 /)
+!     bl = K_1(:) + (/ 2*K_1(1)/3 , (K_2(2)-K_1(2))/2 /)
+     br = K_1(:) - (/ K_1(1)/2 , K_1(2) /)
+     bl = -bl
+     br = -br
+  case default
+     stop 'error: center is wrong'
+  end select
+
+  kvec(:) = (/ K_1(1)/2 , (K_1(2)+(K_2(2)-K_1(2))/2) /) ! M point
+  e_3 = eg3(kvec(1),kvec(2))
+  Emax = (e_3%w2-e_3%w1) * fmax
+  Emin = 0.0d0
+
+  if(abs(mu2d*(kbase1(1)-kbase1(2)*kbase2(1)/kbase2(2))).lt.sqrt(3.0d0)*K_2(2)) then
+     write (*,*) mu2d,mu2d*(kbase1(1)-kbase1(2)*kbase2(1)/kbase2(2))
+     write (*,100)
+     stop
+  end if
+
+  !if ( nt2d*stepsize.lt.K_1(1) ) then
+  if (nt2d*2.0d0*pi/nt*auc.lt.K_1(1)) then
+     write (*,150)
+     stop
+  endif
+
+  nline = 0
+  do mu1 = 0, mu2d ! mu
+     mu = mu1
+     if( center == 2 ) mu = -mu1
+     number = 0
+     ve = 10000.0d0
+     do i = -nt2d, nt2d ! on the cuttingline
+        ktry = i*1.0d0/nt*2.0d0*pi/tt*auc
+        kvec(:) = mu*kbase1 + ktry*kbase2/sqrt(dot_product(kbase2,kbase2))
+
+        conditionx = (kvec(1).ge.bl(1)).and.(kvec(1).le.br(1))
+        conditiony = (kvec(2).ge.bl(2)).and.(kvec(2).le.br(2))
+        if( .not.(conditionx.and.conditiony) ) cycle
+
+        kc = mu
+        kt = i
+        call tbtube(evflag,kc,kt,nc,nt,nab,rab,hab,oab,ener,ampl)
+        ec = ener(5)
+        ev = ener(4)
+        e = ec - ev
+
+        if( (ec.ge.Emin).and.(ec.le.Emax) ) then
+           number = number + 1
+           if( number == 1 ) bt = i ! start point on the cutting line
+           up = i ! end point on the cutting line
+           if( e.lt.ve ) then
+              ve = e
+              vec = ec
+              vev = ev
+              vk = i
+           end if
+        end if
+     end do ! on the cuttingline
+
+     if( number /= 0 ) then
+        nline = nline + 1
+        muarry1(nline) = mu
+        btarry1(nline) = bt
+        uparry1(nline) = up
+        vhse1(nline) = ve ! min_energy on the cutting line
+        vhsec1(nline) = vec
+        vhsev1(nline) = vev
+        vhsk1(nline) = vk ! ktry on that case
+     end if
+  end do ! mu
+
+  allocate(musort(nline),vhse2(nline),stat=error)
+  if (error.ne.0) then
+     write (*,200)
+     stop
+  endif
+
+  do i = 1, nline
+     musort(i) = muarry1(i)
+     vhse2(i) = vhse1(i)
+  end do
+
+  if(nline.ge.1) then
+     call DSORT(vhse2,musort,nline,2) !sort vhse2&musort in increasing
+  end if
+
+  do i = 1, nline
+     do j = 1, nline
+        if(abs(1.0d0*musort(i)-1.0d0*muarry1(j)).lt.1.0d-4) then
+           muarry2(i)=muarry1(j)
+           btarry2(i)=btarry1(j)
+           uparry2(i)=uparry1(j)
+           vhsk2(i)=vhsk1(j)
+           vhsec2(i)=vhsec1(j)
+           vhsev2(i)=vhsev1(j)
+        endif
+     enddo
+  enddo
+
+  do i = 1, nline
+     nmke%mu(i) = muarry2(i)    !mu
+     nmke%bt(i) = btarry2(i)    !k_vector at starting point
+     nmke%up(i) = uparry2(i)    !k_vector at ending point
+     nmke%vhse(i) = vhse2(i)    !min energy on the cuttingline
+     nmke%vhsec(i) = vhsec2(i)  !min con band energy
+     nmke%vhsev(i) = vhsev2(i)  !min van band energy
+     nmke%vhsk(i) = vhsk2(i)    !k_vector on that case
+  enddo
+  nmke%nline = nline
+
+  deallocate(musort,vhse2)
+
+100 format(" >> makecutline >> mu2d is too small >> ")
+150 format(" >> makecutline >> nt2d is too small >> ")
+200 format(" >> makecutline >> not allocate >> ")
+
+end subroutine cutline

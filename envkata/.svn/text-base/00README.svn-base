@@ -1,0 +1,53 @@
+
+--------------------------------------------------------------------------------
+exkatampi.f90: Exciton energy Kataura plot
+--------------------------------------------------------------------------------
+
+Note:
+
+- Now exkatampi.f90 does not use libjiang.
+- When you calculate E77S and E33M, diameter range is between 1.0nm and 3.0nm.
+- the calculation time for all (from E11S to E66S and from E11M to E33M)
+  is about half or one day by using 24 CPUs in TUBE. Diameter range is
+  between 0.7nm and 3.0nm.
+
+usage:
+
+0. Set parameters for compiling. see
+   /home1/students/kentaro/for/mk/
+
+1. Check parameters for calculation in exkatampi.f90 and exkataparameter.f90
+
+2. Make directories "results" and "def". Calculation results will be written
+   in these directories.
+   "results" contains exciton Kataura plot (the name is qex-kat...dat)
+   "def" contains dielectric function as a function of q vector
+   (the name is def...dat)
+
+3. Just type "make exkatampi" on TUBE or WIRE
+
+4. Run the program by using  the script "exkatampi.sh".
+   Before using this script, you must change the variable "MaxCPU" in this script.
+   MaxCPU is used by "bsub". Such as
+
+   $ bsub -n $MaxCPU ...
+
+   Please select best number for your environment.
+   In my case, MaxCPU is 10 on TUBE.
+   So I use 20 CPUs because TUBE has 24 CPUs.
+
+   After setting MaxCPU, run the script for example
+
+   $ sh exkatampi.sh all all
+
+   First argument denotes nanotube type. Here s0, s1, s2 and all mean
+   metal, type I, type II and all types (metal, type I and type II),
+   respectively.
+
+   Second argument denote subband index 1...7 (MaxSubBand).
+
+   Of course, You can calculate one subband:
+
+   $ sh exkatampi.sh s1 3
+
+   This command means calculating E33 of semiconducting Type I nanotubes.

@@ -1,0 +1,27 @@
+
+function cutoff(x)
+  != cutoff function
+  !
+  != References
+  ! 1. T.Ando, Journal of the Physical Society of Japan 75, 024707 (2006).
+  !    Effects of Valley Mixing and Exchange on Excitons in Carbon Nanotubes with Aharonov-Bohm Flux
+  !    Eq.(3.8)
+
+  use common,only : dt
+  use exkataparameter,only : PI, alp, epc
+
+  implicit none
+
+  ! input
+  real(8) :: x
+
+  ! output
+  real(8) :: cutoff
+
+  ! local
+  real(8) :: ep
+
+  ep = epc*sqrt(3.0d0)*3.0d0/dt
+  cutoff = ep**alp/(abs(x)**alp+ep**alp)
+
+end function cutoff

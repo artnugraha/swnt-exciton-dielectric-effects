@@ -1,0 +1,115 @@
+!>
+!! \file wfcoecbi.f90
+!! \brief calculate wave function coefficient and energy base on ETB
+!<
+
+!>
+!! \brief calculate wave function coefficient and energy base on ETB
+!!
+!! subroutine wfcoecbi calculates electron and hole wave function coefficient
+!! and energy base on ETB around K and K' points.
+!!
+!! \param[in] nmwf1 wave vector around K point
+!! \param[in] nmwf2 wave vector around K' point
+!! \param[out] wfcoe1 pi (valence) band
+!! \param[out] wfcoe1 anti-pi (conduction) band
+!!
+!! \author Jie Jiang (jiang@chips.ncsu.edu)
+!! \author Kentaro Sato (kentaro@flex.phys.tohoku.ac.jp)
+!<
+subroutine wfcoecbi(nmwf1,nmwf2,wfcoe1,wfcoe2)
+
+  use common,only : wfmesh, wfqp
+  use common,only : nc, nt, nab, rab, hab, oab
+
+  implicit none
+
+  ! input
+  type(wfmesh),intent(in) :: nmwf1, nmwf2
+
+  ! output
+  type(wfqp),intent(out) :: wfcoe1, wfcoe2
+
+  ! local
+  integer :: mubt, muup, kbt, kup
+  complex(8) :: cv(2), cc(2)
+  integer :: muk, k
+
+  ! for tbtube
+  integer,parameter :: nb = 4, nd = 3, nu = 64, ns = 2
+  integer,parameter :: nm = nb*ns
+  integer,parameter :: evflag = 1
+  real(8) :: ener(nm)
+  complex(8) :: ampl(nm,nm)
+
+  ! for allocate
+  integer :: sev, sec, scv, scc
+  logical :: cond
+
+  !-------------------------------------------------------------------
+  ! around K point
+  !-------------------------------------------------------------------
+
+  mubt = nmwf1%mubt
+  muup = nmwf1%muup
+  kbt = nmwf1%kbt
+  kup = nmwf1%kup
+
+  allocate(wfcoe1%ev(mubt:muup,kbt:kup),stat=sev)
+  allocate(wfcoe1%ec(mubt:muup,kbt:kup),stat=sec)
+  allocate(wfcoe1%cv(mubt:muup,kbt:kup,2),stat=scv)
+  allocate(wfcoe1%cc(mubt:muup,kbt:kup,2),stat=scc)
+
+  cond = (sev.eq.0).and.(sec.eq.0).and.(scv.eq.0).and.(scc.eq.0)
+  if( .not.cond ) then
+     write(*,*) '>>wfcoecbi>>allocate problem for wfcoe1'
+  end if
+
+  do muk = nmwf1%mubt, nmwf1%muup, 1
+     do k = nmwf1%kbt, nmwf1%kup, 1
+        call tbtube(evflag,muk,k,nc,nt,nab,rab,hab,oab,ener,ampl)
+        wfcoe1%ev(muk,k) = ener(4) ! pi (valence) band energy
+        wfcoe1%ec(muk,k) = ener(5) ! anti-pi (conduction) band energy
+        cv(1) = ampl(2,4)
+        cv(2) = ampl(6,4)
+        cc(1) = ampl(2,5)
+        cc(2) = ampl(6,5)
+        wfcoe1%cv(muk,k,:) = cv(:)
+        wfcoe1%cc(muk,k,:) = cc(:)
+     end do
+  end do
+
+  !-------------------------------------------------------------------
+  ! around K' point
+  !-------------------------------------------------------------------
+
+  mubt = nmwf2%mubt
+  muup = nmwf2%muup
+  kbt = nmwf2%kbt
+  kup = nmwf2%kup
+
+  allocate(wfcoe2%ev(mubt:muup,kbt:kup),stat=sev)
+  allocate(wfcoe2%ec(mubt:muup,kbt:kup),stat=sec)
+  allocate(wfcoe2%cv(mubt:muup,kbt:kup,2),stat=scv)
+  allocate(wfcoe2%cc(mubt:muup,kbt:kup,2),stat=scc)
+
+  cond = (sev.eq.0).and.(sec.eq.0).and.(scv.eq.0).and.(scc.eq.0)
+  if( .not.cond ) then
+     write(*,*) '>>wfcoecbi>>allocate problem for wfcoe2'
+  end if
+
+  do muk = nmwf2%mubt, nmwf2%muup, 1
+     do k = nmwf2%kbt, nmwf2%kup, 1
+        call tbtube(evflag,muk,k,nc,nt,nab,rab,hab,oab,ener,ampl)
+        wfcoe2%ev(muk,k) = ener(4)
+        wfcoe2%ec(muk,k) = ener(5)
+        cv(1) = ampl(2,4)
+        cv(2) = ampl(6,4)
+        cc(1) = ampl(2,5)
+        cc(2) = ampl(6,5)
+        wfcoe2%cv(muk,k,:) = cv(:)
+        wfcoe2%cc(muk,k,:) = cc(:)
+     end do
+  end do
+
+end subroutine wfcoecbi
